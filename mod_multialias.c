@@ -297,7 +297,7 @@ PHYSICALPATH_FUNC(mod_multialias_physical_handler) {
 					strncmp(uri_ptr, ds->key->ptr, alias_len))) {
 			/* matched */
 
-			int exists;
+			int exists = 1;
 			// perform existence checks only if arrays were found in config
 			// otherwise they are not necessary
 			if (p->conf.perform_existence_check) {
@@ -309,8 +309,6 @@ PHYSICALPATH_FUNC(mod_multialias_physical_handler) {
 				buffer_append_string(target, uri_ptr + alias_len);
 				exists = (0 == stat(target->ptr, &info));
 				buffer_free(target);
-			} else {
-				exists = 1;
 			}
 			if (exists) {
 				buffer_copy_buffer(con->physical.basedir, ds->value);
