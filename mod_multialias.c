@@ -13,7 +13,6 @@
 /* plugin config for all request/connections */
 typedef struct {
 	array *alias;
-	unsigned int perform_existence_check;
 } plugin_config;
 
 typedef struct {
@@ -159,7 +158,6 @@ SETDEFAULTS_FUNC(mod_multialias_set_defaults) {
 
 		s = calloc(1, sizeof(plugin_config));
 		s->alias = array_init();
-		s->perform_existence_check = 0;
 		cv[0].destination = s->alias;
 
 		p->config_storage[i] = s;
@@ -191,7 +189,6 @@ SETDEFAULTS_FUNC(mod_multialias_set_defaults) {
 									pair->value->ptr,
 									buffer_string_length(pair->value));
 			} else if (da->value->data[l]->type == TYPE_ARRAY) {
-				s->perform_existence_check = 1;
 				data_array *paths = (data_array *)da->value->data[l];
 				for (size_t m = 0; m < paths->value->used; m++) {
 					data_string *pair = (data_string *)(paths->value->data[m]);
@@ -297,19 +294,15 @@ PHYSICALPATH_FUNC(mod_multialias_physical_handler) {
 					strncmp(uri_ptr, ds->key->ptr, alias_len))) {
 			/* matched */
 
-			int exists = 1;
-			// perform existence checks only if arrays were found in config
-			// otherwise they are not necessary
-			if (p->conf.perform_existence_check) {
-				// check if request path exists
-				struct stat info;
-				buffer *target;
-				target = buffer_init();
-				buffer_copy_buffer(target, ds->value);
-				buffer_append_string(target, uri_ptr + alias_len);
-				exists = (0 == stat(target->ptr, &info));
-				buffer_free(target);
-			}
+			// check if request path exists
+			struct stat info;
+			buffer *target;
+			target = buffer_init();
+			buffer_copy_buffer(target, ds->value);
+			buffer_append_string(target, uri_ptr + alias_len);
+			buffer_urldecode_path(target);
+			int exists = (0 == stat(target->ptr, &info));
+			buffer_free(target);
 			if (exists) {
 				buffer_copy_buffer(con->physical.basedir, ds->value);
 				buffer_copy_buffer(srv->tmp_buf, ds->value);
@@ -329,6 +322,7 @@ PHYSICALPATH_FUNC(mod_multialias_physical_handler) {
 int mod_multialias_plugin_init(plugin *p);
 int mod_multialias_plugin_init(plugin *p) {
 	p->version     = LIGHTTPD_VERSION_ID;
+
 	p->name        = buffer_init_string("multialias");
 
 	p->init           = mod_multialias_init;
