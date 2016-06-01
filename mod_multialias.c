@@ -295,10 +295,12 @@ PHYSICALPATH_FUNC(mod_multialias_physical_handler) {
 			/* matched */
 
 			// check if request path exists
+			static const char *slash = "/";
 			struct stat info;
 			buffer *target;
 			target = buffer_init();
 			buffer_copy_buffer(target, ds->value);
+			buffer_append_string(target, slash);
 			buffer_append_string(target, uri_ptr + alias_len);
 			buffer_urldecode_path(target);
 			int exists = (0 == stat(target->ptr, &info));
@@ -306,6 +308,7 @@ PHYSICALPATH_FUNC(mod_multialias_physical_handler) {
 			if (exists) {
 				buffer_copy_buffer(con->physical.basedir, ds->value);
 				buffer_copy_buffer(srv->tmp_buf, ds->value);
+				buffer_append_string(srv->tmp_buf, slash);
 				buffer_append_string(srv->tmp_buf, uri_ptr + alias_len);
 				buffer_copy_buffer(con->physical.path, srv->tmp_buf);
 				return HANDLER_GO_ON;
